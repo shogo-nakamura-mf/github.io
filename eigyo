@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>インタラクティブ営業メソッド：心理学と脳科学の活用</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Soft Greys (Slate & Stone) with a vibrant Sky Blue accent -->
+    <!-- Application Structure Plan: The application maintains its single-page dashboard structure with three main thematic sections for optimal user experience, now with enhanced visual appeal. 1. **Core Concept**: An initial, engaging section explaining the "3-Layer Brain" model through an interactive diagram. This immediately conveys the report's central idea. 2. **Sales Playbook**: A process-oriented section structured around the sales lifecycle (Approach, Hearing, Closing, etc.). This allows salespeople to find relevant techniques for their immediate tasks. It uses a tabbed interface for easy navigation. 3. **Psychology Toolkit**: A reference section with interactive cards for key psychological principles (Cialdini, biases). This supports non-linear learning and quick look-ups. This structure was chosen to transform the dense report into a practical, task-oriented tool, balancing guided learning (Playbook) with free exploration (Toolkit), which is more effective for adult learners and busy professionals than a linear document. -->
+    <!-- Visualization & Content Choices: 1. **3-Layer Brain Model**: Goal: Inform/Engage. Method: Interactive HTML/CSS diagram with subtle hover effects. Interaction: Click to reveal details. Justification: Visually represents the core theory for better retention and engagement. 2. **SPIN Selling**: Goal: Organize/Inform. Method: Interactive accordion within the "Hearing" tab with smoother transitions. Interaction: Click to expand questions. Justification: Breaks down a complex method into digestible steps, improving readability. 3. **Loss Aversion Chart**: Goal: Compare/Impact. Method: Bar Chart (Chart.js/Canvas) with refined colors. Interaction: Hover tooltips. Justification: Visually demonstrates a key bias more powerfully than text alone, now with a cleaner aesthetic. 4. **Psychology Principles**: Goal: Organize/Reference. Method: Interactive HTML flip cards with enhanced animation and styling. Interaction: Hover/Click to reveal details. Justification: Creates a quick, scannable reference library of techniques with an engaging reveal. All choices prioritize interaction and visual learning over static text to make the content more engaging and memorable, now with a more polished look. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Noto Sans JP', sans-serif; background-color: #f0f4f8; } /* Lighter, softer background */
+        .tab-btn {
+            padding: 1rem 1.5rem;
+            font-weight: 500;
+            text-align: center;
+            border-bottom-width: 2px;
+            transition: all 0.3s ease;
+            border-color: transparent;
+            color: #64748b; /* Slate 500 */
+        }
+        .tab-btn.tab-active {
+            border-color: #0ea5e9; /* Sky 500 */
+            color: #0ea5e9;
+            background-color: #e0f2fe; /* Sky 100 */
+            border-radius: 0.5rem 0.5rem 0 0;
+        }
+        .tab-btn:hover:not(.tab-active) {
+            color: #38bdf8; /* Sky 400 */
+            background-color: #f8fafc;
+        }
+        .content-section { display: none; opacity: 0; transition: opacity 0.5s ease-in-out; }
+        .content-section.active { display: block; opacity: 1; }
+
+        .card-container {
+            perspective: 1000px;
+            height: 12rem; /* Consistent height for cards */
+        }
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .card-container:hover .card-inner { transform: rotateY(180deg); }
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-sizing: border-box; /* Ensure padding doesn't increase size */
+        }
+        .card-front { background-color: white; border: 1px solid #e2e8f0; }
+        .card-back { background-color: #e0f2fe; border: 1px solid #93c5fd; transform: rotateY(180deg); color: #0ea5e9; } /* Sky 100 background, Sky 300 border */
+
+        .brain-layer {
+            transition: all 0.3s ease-in-out;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: 4px solid white;
+            position: relative;
+            z-index: 10;
+        }
+        .brain-layer:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+            z-index: 20; /* Bring hovered layer to front */
+        }
+        #brain-layer-reason { background-color: #a7f3d0; color: #065f46; } /* Emerald 200 */
+        #brain-layer-emotion { background-color: #60a5fa; color: #1e3a8a; } /* Blue 400 */
+        #brain-layer-instinct { background-color: #fca5a5; color: #7f1d1d; } /* Red 300 */
+
+        .accordion-header {
+            background-color: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+        .accordion-header:hover { background-color: #f0f4f8; }
+        .accordion-header span { transition: transform 0.3s ease; }
+        .accordion-header.active span { transform: rotate(180deg); }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .accordion-content.open {
+            max-height: 500px; /* Sufficiently large value */
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+    </style>
+</head>
+<body class="text-slate-700">
+
+    <header class="bg-white shadow-md sticky top-0 z-20">
+        <div class="container mx-auto px-4 py-5 flex flex-col md:flex-row justify-between items-center">
+            <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800 mb-2 md:mb-0">インタラクティブ営業メソッド</h1>
+            <nav class="flex flex-wrap justify-center space-x-4 md:space-x-6 text-slate-600 text-lg">
+                <a href="#core-concept" class="hover:text-sky-500 transition duration-300 ease-in-out py-1">コア概念</a>
+                <a href="#playbook" class="hover:text-sky-500 transition duration-300 ease-in-out py-1">実践プレイブック</a>
+                <a href="#toolkit" class="hover:text-sky-500 transition duration-300 ease-in-out py-1">心理学ツールキット</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-10 md:py-16">
+
+        <!-- Section 1: Core Concept -->
+        <section id="core-concept" class="mb-20 text-center">
+            <h2 class="text-4xl font-bold mb-5 text-slate-800">顧客の「脳」を理解する</h2>
+            <p class="max-w-4xl mx-auto text-slate-600 text-lg mb-12 leading-relaxed">営業の成功は、顧客の意思決定メカニズムを理解することから始まります。人間の脳は「欲求」「感情」「理性」の3層で動いています。このモデルを理解し、各層に響くアプローチを学びましょう。</p>
+            
+            <div class="grid md:grid-cols-3 gap-10 items-start">
+                <!-- Interactive Brain Model -->
+                <div class="md:col-span-1 flex flex-col items-center justify-center space-y-6 p-4">
+                    <div id="brain-layer-reason" class="brain-layer w-48 h-48 rounded-full flex items-center justify-center p-4 text-center font-bold text-lg shadow-lg border-4 border-white transform hover:scale-105 transition-transform duration-300" data-target="brain-info-reason">
+                        理性脳<br><span class="text-base font-normal">(正当化する)</span>
+                    </div>
+                     <div id="brain-layer-emotion" class="brain-layer w-40 h-40 rounded-full flex items-center justify-center p-4 text-center font-bold text-base shadow-lg border-4 border-white transform hover:scale-105 transition-transform duration-300" data-target="brain-info-emotion">
+                        感情脳<br><span class="text-sm font-normal">(好き嫌いを決める)</span>
+                    </div>
+                    <div id="brain-layer-instinct" class="brain-layer w-32 h-32 rounded-full flex items-center justify-center p-4 text-center font-bold text-sm shadow-lg border-4 border-white transform hover:scale-105 transition-transform duration-300" data-target="brain-info-instinct">
+                        欲求脳<br><span class="text-xs font-normal">(欲しがる)</span>
+                    </div>
+                </div>
+
+                <!-- Brain Info Display -->
+                <div class="md:col-span-2 bg-white p-8 rounded-xl shadow-lg text-left min-h-[350px] flex flex-col justify-center">
+                    <div id="brain-info-container">
+                        <div id="brain-info-default">
+                             <h3 class="text-2xl font-bold text-slate-800 mb-3">脳の層をクリックして詳細を見る</h3>
+                            <p class="text-slate-600 leading-relaxed">左の脳の各層をクリックして、その役割と営業でのアプローチ方法を確認してください。顧客の意思決定プロセスを深く理解することで、より効果的な営業戦略を立てることができます。</p>
+                        </div>
+                        <div id="brain-info-instinct" class="hidden">
+                            <h3 class="text-2xl font-bold text-red-700 mb-3">欲求（本能）の脳：行動のトリガー</h3>
+                            <p class="text-slate-700 mb-4 leading-relaxed">生命維持、快楽の追求、苦痛の回避といった根源的な欲求を司ります。顧客の潜在的な「欲」や「痛み」に訴えかけることが行動の最初のトリガーです。</p>
+                            <p class="font-semibold text-red-800">アプローチ例: 「このままだと将来〇〇のリスクがあります（苦痛の回避）」「これを導入すれば、即座に〇〇の負担が減ります（快楽の追求）」</p>
+                        </div>
+                        <div id="brain-info-emotion" class="hidden">
+                            <h3 class="text-2xl font-bold text-blue-700 mb-3">感情の脳：好き嫌いを決める</h3>
+                            <p class="text-slate-700 mb-4 leading-relaxed">好き嫌い、共感、衝動といった反応を司ります。人はまず感情で「良い」と判断し、後から理由を探します。感情的な共感が重要です。</p>
+                            <p class="font-semibold text-blue-800">アプローチ例: 「導入されたお客様は『従業員が本当に喜んでくれた』とおっしゃっています」「この未来、わくわくしませんか？」</p>
+                        </div>
+                         <div id="brain-info-reason" class="hidden">
+                            <h3 class="text-2xl font-bold text-emerald-700 mb-3">理性の脳：正当化と最終判断</h3>
+                            <p class="text-slate-700 mb-4 leading-relaxed">欲求と感情で生まれた衝動を最終チェックします。論理、データ、メリット・デメリットで「これは正しい選択だ」と納得させることがクロージングに繋がります。</p>
+                            <p class="font-semibold text-emerald-800">アプローチ例: 「データによれば、平均30%のコスト削減が見込めます」「競合のA社も導入しており、業界標準になりつつあります」</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Sales Playbook -->
+        <section id="playbook" class="mb-20">
+            <h2 class="text-4xl font-bold mb-5 text-center text-slate-800">実践！営業プロセス別プレイブック</h2>
+            <p class="max-w-4xl mx-auto text-center text-slate-600 text-lg mb-12 leading-relaxed">営業の各フェーズで使える心理学・脳科学に基づいたテクニックを学びましょう。タブをクリックして、各段階の会話術やアクションを確認してください。このプレイブックは、日々の営業活動をより効果的にするための実践的なガイドです。</p>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 sm:p-10">
+                <!-- Tabs -->
+                <div class="border-b-2 border-slate-100 mb-8">
+                    <nav class="flex flex-wrap justify-center -mb-px" id="playbook-tabs">
+                        <button class="tab-btn tab-active" data-target="content-approach">アプローチ</button>
+                        <button class="tab-btn" data-target="content-hearing">ヒアリング</button>
+                        <button class="tab-btn" data-target="content-proposal">提案</button>
+                        <button class="tab-btn" data-target="content-objection">反論処理</button>
+                        <button class="tab-btn" data-target="content-closing">クロージング</button>
+                        <button class="tab-btn" data-target="content-followup">フォロー</button>
+                    </nav>
+                </div>
+
+                <!-- Content Panels -->
+                <div id="playbook-content">
+                    <div id="content-approach" class="content-section active">
+                        <h3 class="text-2xl font-bold text-slate-800 mb-4">アプローチ：警戒心を解き、安心感を与える</h3>
+                        <p class="mb-6 text-slate-700 leading-relaxed">最初の目標は「売ること」ではなく「嫌われないこと」。安心感を与え、話を聞く体制を作ってもらうことが最優先です。</p>
+                        <ul class="space-y-4 list-disc list-inside text-slate-700">
+                            <li><strong>ハロー効果とプライミング効果:</strong> 清潔感のある身だしなみ、明るい挨拶、時間厳守。第一印象で「信頼できる人」と無意識に印象付けます。</li>
+                            <li><strong>ミラーリング:</strong> 相手の話す速度、声のトーン、姿勢などをさりげなく真似て、親近感を醸成します。「似ている」と感じると、人は心を開きやすくなります。</li>
+                            <li><strong>単純接触効果:</strong> 一度で決めようとせず、短い接触を複数回持つことで、徐々に好意度を高めていきます。</li>
+                        </ul>
+                    </div>
+
+                    <div id="content-hearing" class="content-section">
+                        <h3 class="text-2xl font-bold text-slate-800 mb-4">ヒアリング：潜在ニーズを引き出すSPIN話法</h3>
+                        <p class="mb-6 text-slate-700 leading-relaxed">「売り込む」のではなく「聞く」フェーズ。質問を通じて顧客自身に課題の重要性を気づかせ、解決への意欲を高めてもらいます。</p>
+                        <div class="space-y-3">
+                             <div class="accordion-item bg-white rounded-lg overflow-hidden border border-slate-200">
+                                <button class="accordion-header w-full text-left font-semibold p-4 transition flex justify-between items-center text-slate-800">S: 状況質問 (Situation)<span class="transform transition-transform duration-300">&#9660;</span></button>
+                                <div class="accordion-content px-4 pt-0 pb-4 text-slate-600">顧客の現状を把握します。「現在の業務フローはどのようになっていますか？」「この業務に携わっているのは何名ですか？」</div>
+                            </div>
+                             <div class="accordion-item bg-white rounded-lg overflow-hidden border border-slate-200">
+                                <button class="accordion-header w-full text-left font-semibold p-4 transition flex justify-between items-center text-slate-800">P: 問題質問 (Problem)<span class="transform transition-transform duration-300">&#9660;</span></button>
+                                <div class="accordion-content px-4 pt-0 pb-4 text-slate-600">課題や不満を明確にします。「現在のやり方で、特に不便を感じる点はありますか？」「このプロセスでの一番の課題は何ですか？」</div>
+                            </div>
+                             <div class="accordion-item bg-white rounded-lg overflow-hidden border border-slate-200">
+                                <button class="accordion-header w-full text-left font-semibold p-4 transition flex justify-between items-center text-slate-800">I: 示唆質問 (Implication)<span class="transform transition-transform duration-300">&#9660;</span></button>
+                                <div class="accordion-content px-4 pt-0 pb-4 text-slate-600">問題の影響を認識させます。「その問題が続くと、売上や顧客満足度にどのような影響が出ますか？」「その非効率な状況は、従業員のモチベーションに影響していませんか？」</div>
+                            </div>
+                             <div class="accordion-item bg-white rounded-lg overflow-hidden border border-slate-200">
+                                <button class="accordion-header w-full text-left font-semibold p-4 transition flex justify-between items-center text-slate-800">N: 解決質問 (Need-payoff)<span class="transform transition-transform duration-300">&#9660;</span></button>
+                                <div class="accordion-content px-4 pt-0 pb-4 text-slate-600">解決後の理想を語らせます。「もしこの課題が解決できたら、御社にとってどんなメリットがありますか？」「理想の状態を実現するためには、何が必要だと思いますか？」</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="content-proposal" class="content-section">
+                        <h3 class="text-2xl font-bold text-slate-800 mb-4">提案：感情を揺さぶり、記憶に残す</h3>
+                        <p class="mb-6 text-slate-700 leading-relaxed">ロジックだけでなく、顧客の感情に訴えかけ、自分事として捉えてもらうことが重要です。</p>
+                        <ul class="space-y-4 list-disc list-inside text-slate-700">
+                            <li><strong>ストーリーテリング:</strong> 導入事例を物語として語り、顧客が成功のイメージを疑似体験できるようにします。「以前、同じ課題をお持ちだったA社様が…」</li>
+                            <li><strong>フレーミング効果:</strong> 同じ内容でも伝え方を変えます。「コスト」ではなく「未来への投資」、「リスク」ではなく「機会損失」と表現します。</li>
+                            <li><strong>両面提示:</strong> メリットだけでなく、あえてデメリットや注意点も伝えることで、誠実さを示し信頼性を高めます。「このプランは〇〇に強いですが、△△の点だけご注意いただく必要があります」</li>
+                        </ul>
+                    </div>
+                    
+                    <div id="content-objection" class="content-section">
+                        <h3 class="text-2xl font-bold text-slate-800 mb-4">反論処理：顧客の「痛み」を理解し、合意形成へ</h3>
+                        <p class="mb-6 text-slate-700 leading-relaxed">反論は「攻撃」ではなく「不安の表れ」。否定せずに受け止め、共感し、懸念を解消するプロセスです。</p>
+                        <ul class="space-y-4 list-disc list-inside text-slate-700">
+                             <li><strong>NGワードを避ける:</strong> 「でも」「しかし」といった否定語は使わず、「おっしゃる通りですね。その上で…」と繋げます。</li>
+                             <li><strong>感謝と共感:</strong> まずは本音を話してくれたことに感謝します。「貴重なご意見ありがとうございます。〇〇と感じられるのは当然だと思います。」</li>
+                            <li><strong>質問で深掘り:</strong> 「『価格が高い』とのことですが、具体的にどのくらいの価格帯をご想像でしたか？」など、反論の背景にある真意を探ります。</li>
+                        </ul>
+                    </div>
+
+                    <div id="content-closing" class="content-section">
+                        <h3 class="text-2xl font-bold text-slate-800 mb-4">クロージング：「イエス」を引き出す心理テクニック</h3>
+                        <p class="mb-6 text-slate-700 leading-relaxed">顧客が「自分で決めた」と感じられるように、自然な流れで決断を後押しします。</p>
+                        <ul class="space-y-4 list-disc list-inside text-slate-700">
+                            <li><strong>イエスの連鎖:</strong> 小さな同意を積み重ねます。「この機能は便利ですよね？」「サポート体制も安心ですよね？」と確認を重ね、最終的な「イエス」に繋げます。</li>
+                            <li><strong>選択話法:</strong> 「買うか買わないか」ではなく「どちらにするか」を問いかけます。「プランはAとB、どちらがよろしいでしょうか？」</li>
+                            <li><strong>Ifクロージング:</strong> 購入を仮定した質問をします。「もし導入いただく場合、スタートは来月と再来月、どちらがご都合よろしいですか？」</li>
+                        </ul>
+                    </div>
+
+                    <div id="content-followup" class="content-section">
+                        <h3 class="text-2xl font-bold text-slate-800 mb-4">フォローアップ：長期的な関係を築く</h3>
+                        <p class="mb-6 text-slate-700 leading-relaxed">契約はゴールではなくスタート。その後の関係構築が、リピートや紹介に繋がります。</p>
+                         <ul class="space-y-4 list-disc list-inside text-slate-700">
+                            <li><strong>ピーク・エンドの法則:</strong> 商談のピーク（最も盛り上がった点）とエンド（最後の締め）をポジティブな印象で終えることで、商談全体の満足度を高めます。</li>
+                            <li><strong>好意の返報性:</strong> 契約後も役立つ情報を提供するなど、小さな「GIVE」を続けることで、「この人からまた買いたい」と思ってもらえます。</li>
+                            <li><strong>カタルシス効果:</strong> 定期的に連絡し、導入後の悩みや不満を聞き出すことで、顧客はスッキリし、信頼関係が深まります。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- Section 3: Psychology Toolkit -->
+        <section id="toolkit" class="mb-20">
+            <h2 class="text-4xl font-bold mb-5 text-center text-slate-800">営業で使える心理学ツールキット</h2>
+            <p class="max-w-4xl mx-auto text-center text-slate-600 text-lg mb-12 leading-relaxed">強力な心理効果をあなたの武器に。カードにカーソルを合わせる（スマホではタップする）と、テクニックの詳細と営業での応用例が表示されます。</p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Card 1: Social Proof -->
+                <div class="card-container">
+                    <div class="card-inner">
+                        <div class="card-front"><span class="text-xl font-bold text-slate-800">社会的証明</span></div>
+                        <div class="card-back">
+                            <h4 class="font-bold mb-2 text-xl">社会的証明</h4>
+                            <p class="text-sm text-center leading-relaxed">「多くの人が選んでいるものは良いものだ」と感じる心理。導入事例やお客様の声が有効。「業界のシェアNo.1です」「〇〇様にもご導入いただいています」</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Card 2: Scarcity -->
+                <div class="card-container">
+                    <div class="card-inner">
+                        <div class="card-front"><span class="text-xl font-bold text-slate-800">希少性</span></div>
+                        <div class="card-back">
+                            <h4 class="font-bold mb-2 text-xl">希少性</h4>
+                            <p class="text-sm text-center leading-relaxed">手に入りにくいものほど価値があると感じる心理。「期間限定キャンペーン」「残り3社様限定」といった言葉で決断を促します。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Reciprocity -->
+                <div class="card-container">
+                    <div class="card-inner">
+                        <div class="card-front"><span class="text-xl font-bold text-slate-800">返報性</span></div>
+                        <div class="card-back">
+                            <h4 class="font-bold mb-2 text-xl">返報性</h4>
+                            <p class="text-sm text-center leading-relaxed">何かをもらうと「お返しをしたい」と感じる心理。有益な情報提供や親身な相談が、後の「YES」に繋がります。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 4: Authority -->
+                <div class="card-container">
+                    <div class="card-inner">
+                        <div class="card-front"><span class="text-xl font-bold text-slate-800">権威性</span></div>
+                        <div class="card-back">
+                            <h4 class="font-bold mb-2 text-xl">権威性</h4>
+                            <p class="text-sm text-center leading-relaxed">専門家や権威ある人の意見を信じやすい心理。専門家の推薦、受賞歴、メディア掲載実績などが有効です。</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Card 5: Consistency -->
+                <div class="card-container">
+                    <div class="card-inner">
+                        <div class="card-front"><span class="text-xl font-bold text-slate-800">一貫性</span></div>
+                        <div class="card-back">
+                            <h4 class="font-bold mb-2 text-xl">一貫性</h4>
+                            <p class="text-sm text-center leading-relaxed">一度決めたことや言ったことと、矛盾しない行動を取りたい心理。小さなYESを積み重ねるクロージングで活用します。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 6: Liking -->
+                <div class="card-container">
+                    <div class="card-inner">
+                        <div class="card-front"><span class="text-xl font-bold text-slate-800">好意</span></div>
+                        <div class="card-back">
+                            <h4 class="font-bold mb-2 text-xl">好意</h4>
+                            <p class="text-sm text-center leading-relaxed">好きな人からの頼み事は受け入れやすい心理。共通点を見つけたり、褒めたり、清潔感を保つことが信頼関係に繋がります。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-16 bg-white rounded-xl shadow-lg p-8">
+                 <h3 class="text-2xl font-bold text-slate-800 mb-4 text-center">特に強力な心理バイアス：損失回避</h3>
+                 <p class="max-w-3xl mx-auto text-center text-slate-700 text-lg mb-8 leading-relaxed">人は「利益を得ること」よりも「損失を避けること」に強く反応します。提案ではメリットを語るだけでなく、「現状を続けた場合のリスク」や「機会損失」を伝えることが非常に効果的です。</p>
+                 <div class="chart-container">
+                    <canvas id="lossAversionChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-slate-900 text-white mt-20">
+        <div class="container mx-auto px-4 py-8 text-center text-slate-300">
+            <p>&copy; 2025 Interactive Sales Method. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Brain Model Interaction
+            const brainLayers = document.querySelectorAll('.brain-layer');
+            const brainInfoContainer = document.getElementById('brain-info-container');
+            const defaultInfo = document.getElementById('brain-info-default');
+
+            brainLayers.forEach(layer => {
+                layer.addEventListener('click', function() {
+                    const targetId = this.dataset.target;
+                    
+                    // Hide all info sections
+                    brainInfoContainer.querySelectorAll('div[id^="brain-info-"]').forEach(info => {
+                        info.classList.add('hidden');
+                    });
+                    
+                    // Show target info section
+                    const targetInfo = document.getElementById(targetId);
+                    if (targetInfo) {
+                        targetInfo.classList.remove('hidden');
+                    }
+                });
+            });
+
+            // Playbook Tabs Interaction
+            const tabs = document.querySelectorAll('.tab-btn');
+            const contentPanels = document.querySelectorAll('.content-section');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    tabs.forEach(item => {
+                        item.classList.remove('tab-active');
+                    });
+                    this.classList.add('tab-active');
+
+                    const targetId = this.dataset.target;
+                    contentPanels.forEach(panel => {
+                        if (panel.id === targetId) {
+                            panel.classList.add('active');
+                        } else {
+                            panel.classList.remove('active');
+                        }
+                    });
+                });
+            });
+            
+            // Accordion Interaction
+            document.querySelectorAll('.accordion-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    const arrow = header.querySelector('span');
+                    
+                    // Close all other open accordions
+                    document.querySelectorAll('.accordion-content.open').forEach(openContent => {
+                        if (openContent !== content) {
+                            openContent.classList.remove('open');
+                            openContent.previousElementSibling.classList.remove('active');
+                            openContent.previousElementSibling.querySelector('span').style.transform = 'rotate(0deg)';
+                        }
+                    });
+
+                    content.classList.toggle('open');
+                    header.classList.toggle('active'); // Add active class to header
+                    if (content.classList.contains('open')) {
+                        arrow.style.transform = 'rotate(180deg)';
+                    } else {
+                        arrow.style.transform = 'rotate(0deg)';
+                    }
+                });
+            });
+            
+            // Loss Aversion Chart
+            const ctx = document.getElementById('lossAversionChart').getContext('2d');
+            const lossAversionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['+1万円の利益を得る喜び', '−1万円の損失を被る苦痛'],
+                    datasets: [{
+                        label: '心理的インパクトの強さ',
+                        data: [1, 2.25],
+                        backgroundColor: [
+                            'rgba(56, 189, 248, 0.7)', /* Sky 400 */
+                            'rgba(239, 68, 68, 0.7)'  /* Red 500 */
+                        ],
+                        borderColor: [
+                            'rgba(14, 165, 233, 1)', /* Sky 500 */
+                            'rgba(220, 38, 38, 1)'   /* Red 600 */
+                        ],
+                        borderWidth: 1,
+                        borderRadius: 5 /* Rounded bars */
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: {
+                                display: false /* Hide x-axis grid lines */
+                            },
+                            ticks: {
+                                display: false /* Hide x-axis labels */
+                            },
+                            title: {
+                                display: true,
+                                text: '心理的インパクトの相対的な強さ',
+                                color: '#475569', /* Slate 600 */
+                                font: {
+                                    size: 14,
+                                    weight: '500'
+                                }
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false /* Hide y-axis grid lines */
+                            },
+                            ticks: {
+                                color: '#334155', /* Slate 700 */
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(30, 41, 59, 0.9)', /* Slate 800 */
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: '#64748b', /* Slate 500 */
+                            borderWidth: 1,
+                            cornerRadius: 6,
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.x !== null) {
+                                        label += `約${context.parsed.x}倍のインパクト`;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Smooth scrolling for nav links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>
